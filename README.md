@@ -51,14 +51,68 @@ Options:
 ```
 ├── SCHEMA_MAPPING.yaml    # Metric name mapping rules
 └── src/
-    ├── migrate.py         # Main orchestrator
-    ├── mapping.py         # Schema transformation logic
-    ├── influx_reader.py   # InfluxDB client
-    ├── vm_writer.py       # VictoriaMetrics writer
-    ├── progress.py        # Resumable progress tracking
-    ├── requirements.txt   # Python dependencies
-    └── tests/             # Unit tests
+    ├── migrate.py             # Main orchestrator
+    ├── migrate_hvac_action.py # HVAC action string migration
+    ├── mapping.py             # Schema transformation logic
+    ├── influx_reader.py       # InfluxDB client
+    ├── vm_writer.py           # VictoriaMetrics writer
+    ├── progress.py            # Resumable progress tracking
+    ├── requirements.txt       # Python dependencies
+    └── tests/                 # Unit tests
 ```
+
+## HVAC Action Migration
+
+The `migrate_hvac_action.py` script handles the special case of HVAC action strings (heating, idle, cooling, etc.) which require conversion to the multi-label format used by the Home Assistant Prometheus exporter.
+
+### Why a Separate Script?
+
+InfluxDB stores HVAC actions as string values in `hvac_action_str`:
+```
+hvac_action_str="heating"
+```
+
+The Prometheus exporter uses a different format with one metric per possible action:
+```
+homeassistant_climate_action{action="heating"} = 1
+homeassistant_climate_action{action="idle"} = 0
+homeassistant_climate_action{action="cooling"} = 0
+...
+```
+
+### Usage
+
+```bash
+# Dry-run (recommended first)
+python migrate_hvac_action.py --dry-run
+
+# Actual migration
+python migrate_hvac_action.py
+
+# Custom date range
+python migrate_hvac_action.py --start-date 2024-01-01 --end-date 2025-11-30
+```
+
+### CLI Options
+
+```
+python migrate_hvac_action.py [OPTIONS]
+
+Options:
+  --dry-run             Validate without writing data
+  --start-date DATE     Start date (YYYY-MM-DD, default: 2024-01-01)
+  --end-date DATE       End date (YYYY-MM-DD, default: 2025-11-30)
+  --influx-url URL      InfluxDB server URL
+  --influx-token TOKEN  InfluxDB auth token (or set INFLUX_TOKEN env var)
+  --influx-org ORG      InfluxDB organization (default: influxdata)
+  --influx-bucket NAME  InfluxDB bucket (default: home-assistant)
+  --vm-url URL          VictoriaMetrics server URL
+  --batch-size N        Batch size for writing (default: 10000)
+```
+
+### Supported Actions
+
+The script handles all Home Assistant HVAC actions: `heating`, `idle`, `cooling`, `off`, `drying`, `fan`, `preheating`, `defrosting`.
 
 ## Schema Mapping
 
