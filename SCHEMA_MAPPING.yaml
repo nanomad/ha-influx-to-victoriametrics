@@ -1,0 +1,449 @@
+# InfluxDB to VictoriaMetrics Schema Mapping
+# This file defines how InfluxDB data maps to VictoriaMetrics metrics
+
+# ============================================================================
+# LABEL TRANSFORMATION
+# ============================================================================
+labels:
+  # Direct mappings (InfluxDB tag → VM label)
+  direct:
+    domain: domain
+    friendly_name: friendly_name
+
+  # Computed labels
+  computed:
+    # entity = "{domain}.{entity_id}"
+    entity:
+      template: "{domain}.{entity_id}"
+
+  # Static labels added to all migrated data
+  static:
+    job: influxdb-migration
+    instance: home-assistant.node-red.svc.cluster.local:8123
+
+# ============================================================================
+# METRIC NAME MAPPING
+# ============================================================================
+# Format: homeassistant_{domain}_{type}_{unit}
+
+# Primary mapping: InfluxDB _measurement (unit) → VM metric suffix
+# Key = InfluxDB _measurement, Value = VM metric name pattern
+
+metric_mappings:
+
+  # --------------------------------------------------------------------------
+  # SENSOR DOMAIN MAPPINGS
+  # --------------------------------------------------------------------------
+  sensor:
+    # Temperature
+    "°C":
+      metric: homeassistant_sensor_temperature_celsius
+      description: Temperature in Celsius
+    "C":
+      metric: homeassistant_sensor_temperature_celsius
+      description: Temperature in Celsius (alternate)
+    "K":
+      metric: homeassistant_sensor_temperature_k
+      description: Temperature in Kelvin
+    "mK":
+      metric: homeassistant_sensor_temperature_mk
+      description: Temperature in milliKelvin
+      allow_new: true
+
+    # Power & Energy
+    "W":
+      metric: homeassistant_sensor_power_w
+      description: Power in Watts
+    "kW":
+      metric: homeassistant_sensor_power_kw
+      description: Power in kilowatts
+    "Wh":
+      metric: homeassistant_sensor_energy_wh
+      description: Energy in Watt-hours
+    "kWh":
+      metric: homeassistant_sensor_energy_kwh
+      description: Energy in kilowatt-hours
+    "Wh/km":
+      metric: homeassistant_sensor_energy_consumption_wh_per_km
+      description: Energy consumption per km
+      allow_new: true
+    "VA":
+      metric: homeassistant_sensor_apparent_power_va
+      description: Apparent power in VA
+
+    # Electrical
+    "V":
+      metric: homeassistant_sensor_voltage_v
+      description: Voltage in Volts
+    "mV":
+      metric: homeassistant_sensor_voltage_mv
+      description: Voltage in millivolts
+    "A":
+      metric: homeassistant_sensor_current_a
+      description: Current in Amperes
+
+    # Percentage-based (requires context - see special_mappings)
+    "%":
+      metric: homeassistant_sensor_unit_percent
+      description: Generic percentage (use special_mappings for specific types)
+      special_mapping_required: true
+    "% available":
+      metric: homeassistant_sensor_unit_u0x25u0x20available
+      description: Availability percentage (% space escaped)
+
+    # Pressure
+    "bar":
+      metric: homeassistant_sensor_pressure_bar
+      description: Pressure in bar
+    "hPa":
+      metric: homeassistant_sensor_pressure_hpa
+      description: Pressure in hectopascals
+      allow_new: true
+
+    # Distance
+    "m":
+      metric: homeassistant_sensor_distance_m
+      description: Distance in meters
+    "km":
+      metric: homeassistant_sensor_distance_km
+      description: Distance in kilometers
+
+    # Speed
+    "m/s":
+      metric: homeassistant_sensor_unit_m_per_s
+      description: Speed in meters per second
+    "km/h":
+      metric: homeassistant_sensor_speed_km_per_h
+      description: Speed in km/h
+
+    # Duration
+    "s":
+      metric: homeassistant_sensor_duration_s
+      description: Duration in seconds
+    "min":
+      metric: homeassistant_sensor_duration_min
+      description: Duration in minutes
+    "h":
+      metric: homeassistant_sensor_duration_h
+      description: Duration in hours
+    "d":
+      metric: homeassistant_sensor_duration_d
+      description: Duration in days
+
+    # Signal
+    "dBm":
+      metric: homeassistant_sensor_signal_strength_dbm
+      description: Signal strength in dBm
+
+    # Illuminance
+    "lx":
+      metric: homeassistant_sensor_illuminance_lx
+      description: Illuminance in lux
+    "lux":
+      metric: homeassistant_sensor_illuminance_lx
+      description: Illuminance in lux (alternate)
+
+    # Volume (m³ escaped as mu0xb3 in VM)
+    "m³":
+      metric: homeassistant_sensor_water_mu0xb3
+      description: Volume in cubic meters (water)
+    "m3":
+      metric: homeassistant_sensor_water_mu0xb3
+      description: Volume in cubic meters (alternate)
+    "m³/h":
+      metric: homeassistant_sensor_volume_flow_rate_mu0xb3_per_h
+      description: Volume flow rate
+    "m3/h":
+      metric: homeassistant_sensor_volume_flow_rate_mu0xb3_per_h
+      description: Volume flow rate (alternate)
+
+    # Area
+    "m²":
+      metric: homeassistant_sensor_area_mu0xb2
+      description: Area in square meters (² escaped as u0xb2)
+
+    # Rotation
+    "rpm":
+      metric: homeassistant_sensor_unit_rpm
+      description: Rotations per minute
+
+    # Other units
+    "floors":
+      metric: homeassistant_sensor_unit_floors
+      description: Floor count
+    "steps":
+      metric: homeassistant_sensor_unit_steps
+      description: Step count
+    "items":
+      metric: homeassistant_sensor_unit_items
+      description: Item count
+    "gCO2eq/kWh":
+      metric: homeassistant_sensor_unit_gco2eq_per_kwh
+      description: Carbon intensity
+    "€/kWh":
+      metric: homeassistant_sensor_unit_u0x20ac_per_kwh
+      description: Energy price (€ escaped as u0x20ac)
+    "°":
+      metric: homeassistant_sensor_unit_u0xb0
+      description: Angle in degrees (° escaped as u0xb0)
+
+    # Generic/unitless
+    "units":
+      metric: homeassistant_sensor_state
+      description: Generic numeric state
+
+  # --------------------------------------------------------------------------
+  # BINARY_SENSOR DOMAIN
+  # --------------------------------------------------------------------------
+  binary_sensor:
+    "units":
+      metric: homeassistant_binary_sensor_state
+      description: Binary sensor state (0/1)
+
+  # --------------------------------------------------------------------------
+  # SWITCH DOMAIN
+  # --------------------------------------------------------------------------
+  switch:
+    "units":
+      metric: homeassistant_switch_state
+      description: Switch state (0/1)
+
+  # --------------------------------------------------------------------------
+  # LIGHT DOMAIN
+  # --------------------------------------------------------------------------
+  light:
+    "units":
+      metric: homeassistant_light_brightness_percent
+      description: Light brightness
+
+  # --------------------------------------------------------------------------
+  # CLIMATE DOMAIN
+  # --------------------------------------------------------------------------
+  climate:
+    "°C":
+      metric: homeassistant_climate_current_temperature_celsius
+      description: Climate current temperature
+    "units":
+      metric: homeassistant_climate_mode
+      description: Climate mode
+
+  # --------------------------------------------------------------------------
+  # COVER DOMAIN
+  # --------------------------------------------------------------------------
+  cover:
+    "units":
+      metric: homeassistant_cover_state
+      description: Cover state
+
+  # --------------------------------------------------------------------------
+  # LOCK DOMAIN
+  # --------------------------------------------------------------------------
+  lock:
+    "units":
+      metric: homeassistant_lock_state
+      description: Lock state
+
+  # --------------------------------------------------------------------------
+  # DEVICE_TRACKER DOMAIN
+  # --------------------------------------------------------------------------
+  device_tracker:
+    "units":
+      metric: homeassistant_device_tracker_state
+      description: Device tracker state
+
+  # --------------------------------------------------------------------------
+  # PERSON DOMAIN
+  # --------------------------------------------------------------------------
+  person:
+    "units":
+      metric: homeassistant_person_state
+      description: Person state
+
+  # --------------------------------------------------------------------------
+  # ALARM_CONTROL_PANEL DOMAIN
+  # --------------------------------------------------------------------------
+  alarm_control_panel:
+    "units":
+      metric: homeassistant_alarm_control_panel_state
+      description: Alarm panel state
+
+  # --------------------------------------------------------------------------
+  # UPDATE DOMAIN
+  # --------------------------------------------------------------------------
+  update:
+    "units":
+      metric: homeassistant_update_state
+      description: Update available state
+
+  # --------------------------------------------------------------------------
+  # AUTOMATION DOMAIN (ignored - not in current VM metrics)
+  # --------------------------------------------------------------------------
+  automation:
+    "units":
+      ignore: true
+      description: Automation state - skip for now
+
+  # --------------------------------------------------------------------------
+  # SUN DOMAIN (ignored - not in current VM metrics)
+  # Note: sun_solar_elevation and sun_solar_azimuth come through as sensor/°
+  # --------------------------------------------------------------------------
+  sun:
+    "units":
+      ignore: true
+      description: Sun state entity - skip for now
+
+  # --------------------------------------------------------------------------
+  # ZONE DOMAIN (ignored - not in current VM metrics)
+  # --------------------------------------------------------------------------
+  zone:
+    "units":
+      ignore: true
+      description: Zone state - skip for now
+
+  # --------------------------------------------------------------------------
+  # OPENHASP DOMAIN (ignored - not in current VM metrics)
+  # --------------------------------------------------------------------------
+  openhasp:
+    "units":
+      ignore: true
+      description: OpenHASP device state - skip for now
+
+  # --------------------------------------------------------------------------
+  # CALENDAR DOMAIN (ignored - not in current VM metrics)
+  # --------------------------------------------------------------------------
+  calendar:
+    "units":
+      ignore: true
+      description: Calendar state - skip for now
+
+  # --------------------------------------------------------------------------
+  # SCRIPT DOMAIN (ignored - not in current VM metrics)
+  # --------------------------------------------------------------------------
+  script:
+    "units":
+      ignore: true
+      description: Script state - skip for now
+
+  # --------------------------------------------------------------------------
+  # SELECT DOMAIN (ignored - not in current VM metrics)
+  # --------------------------------------------------------------------------
+  select:
+    "units":
+      ignore: true
+      description: Select entity state - skip for now
+
+  # --------------------------------------------------------------------------
+  # MEDIA_PLAYER DOMAIN (ignored - not in current VM metrics)
+  # --------------------------------------------------------------------------
+  media_player:
+    "units":
+      ignore: true
+      description: Media player state - skip for now
+
+  # --------------------------------------------------------------------------
+  # NUMBER/INPUT_NUMBER DOMAINS
+  # --------------------------------------------------------------------------
+  number:
+    "units":
+      metric: homeassistant_number_state
+      description: Number entity state
+    "A":
+      metric: homeassistant_number_state_a
+      description: Number in Amperes
+    "W":
+      metric: homeassistant_number_state_w
+      description: Number in Watts
+    "°C":
+      metric: homeassistant_number_state_celsius
+      description: Number in Celsius
+    "%":
+      metric: homeassistant_number_state_percent
+      description: Number percentage
+    "kWh":
+      metric: homeassistant_number_state_kwh
+      description: Number in kWh
+    "h":
+      metric: homeassistant_number_state_h
+      description: Number in hours
+    "s":
+      metric: homeassistant_number_state_s
+      description: Number in seconds
+
+  input_number:
+    "units":
+      metric: homeassistant_input_number_state
+      description: Input number state
+    "A":
+      metric: homeassistant_input_number_state_a
+      description: Input number in Amperes
+    "W":
+      metric: homeassistant_input_number_state_w
+      description: Input number in Watts
+
+# ============================================================================
+# SPECIAL MAPPINGS
+# ============================================================================
+# For ambiguous units like %, use entity_id patterns to determine metric
+
+special_mappings:
+  "%":
+    rules:
+      - pattern: "battery"
+        metric: homeassistant_sensor_battery_percent
+      - pattern: "humidity"
+        metric: homeassistant_sensor_humidity_percent
+      - pattern: "moisture"
+        metric: homeassistant_sensor_moisture_percent
+      - pattern: "signal"
+        ignore: true
+        description: Signal strength percent not in VM yet
+      - pattern: "cpu"
+        metric: homeassistant_sensor_cpu_percent
+      - pattern: "memory"
+        metric: homeassistant_sensor_memory_percent
+      - pattern: "disk"
+        metric: homeassistant_sensor_disk_percent
+      - pattern: "cloud"
+        metric: homeassistant_sensor_cloud_coverage_percent
+      - pattern: "default"
+        metric: homeassistant_sensor_unit_percent
+
+# ============================================================================
+# FIELD MAPPINGS
+# ============================================================================
+# Map specific (domain, field) combinations to VM metrics.
+# Used for domains that have multiple time-series fields beyond just 'value'.
+# The 'value' field uses the standard metric_mappings above.
+
+field_mappings:
+  climate:
+    # The 'value' field is handled by metric_mappings -> climate -> units
+    current_temperature:
+      metric: homeassistant_climate_current_temperature_celsius
+      description: Current measured temperature
+    temperature:
+      metric: homeassistant_climate_target_temperature_celsius
+      description: Target/setpoint temperature
+
+  cover:
+    # The 'value' field is handled by metric_mappings -> cover -> units
+    current_position:
+      metric: homeassistant_cover_position
+      description: Current cover position (0-100)
+
+  light:
+    # The 'value' field is handled by metric_mappings -> light -> units
+    brightness:
+      metric: homeassistant_light_brightness_percent
+      description: Light brightness level
+
+# ============================================================================
+# NOTES
+# ============================================================================
+# Known metrics are fetched live from VictoriaMetrics at runtime.
+notes:
+  - "VM uses Unicode escaping for special characters (u0xb2 = ², u0xb3 = ³)"
+  - "The 'entity' label in VM includes the domain prefix (sensor.foo)"
+  - "InfluxDB 'entity_id' does NOT include the domain prefix"
+  - "Timestamps in VM are milliseconds since epoch"
+  - "InfluxDB timestamps are nanoseconds (divide by 1000000 for VM)"
